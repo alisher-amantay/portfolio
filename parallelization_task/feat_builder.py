@@ -1,43 +1,43 @@
+SECONDS_DAY = 86400
+
 def feat_var(timesT, df_data):
+    # setting variables
+    periods = [day1, day3] # 1 and 3 day periods
+    # mapping actions and action ids
+    actions_map = {'delivery': 3, 'opening': 4, 'clicks': 5}
+
     res_1_9 = []
     for oneT in timesT:
-        day1 = df_data[(df_data['ActionTime'] > (df_data['ActionTime'][oneT] - 86400))&
-                         (df_data['ActionTime'] < df_data['ActionTime'][oneT])&
+        day1 = df_data[(df_data['ActionTime'] > (df_data['ActionTime'][oneT] - SECONDS_DAY)) &
+                         (df_data['ActionTime'] < df_data['ActionTime'][oneT]) &
                          (df_data['ProfileID'] == df_data['ProfileID'][oneT])]
-        day3 = df_data[(df_data['ActionTime'] < (df_data['ActionTime'][oneT] - 86400))&
-                         (df_data['ActionTime'] > (df_data['ActionTime'][oneT]-259200))&
+        day3 = df_data[(df_data['ActionTime'] < (df_data['ActionTime'][oneT] - SECONDS_DAY)) &
+                         (df_data['ActionTime'] > (df_data['ActionTime'][oneT] - SECONDS_DAY * 3)) &
                          (df_data['ProfileID'] == df_data['ProfileID'][oneT])]
-        did_action = df_data[(df_data['ProfileID'] == df_data['ProfileID'][oneT])&
-                         (df_data['ActionTime'] < df_data['ActionTime'][oneT])&
+        did_action = df_data[(df_data['ProfileID'] == df_data['ProfileID'][oneT]) &
+                         (df_data['ActionTime'] < df_data['ActionTime'][oneT]) &
                          (df_data['ActionID'].isin([0, 4, 5]))]
+        # features 1-6: delivery, openings and clicks over specified periods
+        features = [int(len(period_stats[df_data['ActionID'] == action_id].index))
+                    for period_stats in periods
+                    for action_id in actions_map.values()]
+
+        # feature 7. count of unique days of having interactions
+        features.append(int(len(did_action['ActionTimeDt'].unique())))
+        
+        # feature 8
         if len(did_action.index) < 2:
-            feat8 = float('NaN')
+            feat_8 = float('NaN')
         else:
-            feat8 = int((did_action.iloc[-1]['ActionTime'] - did_action.iloc[0]['ActionTime'])/86400)
-
+            feat_8 = int((did_action.iloc[-1]['ActionTime'] - did_action.iloc[0]['ActionTime']) / SECONDS_DAY)
+        features.append(feat_8)
+        
+        # feature 9. days between interaction and delivery
         if len(did_action.index) == 0:
-            feat9 = float('NaN')
+            feat_9 = float('NaN')
         else:
-            feat9 = int((df_data['ActionTime'][oneT] - did_action.iloc[-1]['ActionTime'])/86400)
+            feat_9 = int((df_data['ActionTime'][oneT] - did_action.iloc[-1]['ActionTime']) / SECONDS_DAY)
+        features.append(feat_9)
 
-        res_1_9.append([
-            #feature 1. доставки за 24 часа
-            int(len(day1[df_data['ActionID'] == 3].index)),
-            #feature 2. открытия за 24 часа
-            int(len(day1[df_data['ActionID'] == 4].index)),
-            #feature 3. клики за 24 часа
-            int(len(day1[df_data['ActionID'] == 5].index)),
-            #feature 4. доставки за 3 дня
-            int(len(day3[df_data['ActionID'] == 3].index)),
-            #feature 5. открытия за 3 дня
-            int(len(day3[df_data['ActionID'] == 4].index)),
-            #feature 6. клики за 3 дня
-            int(len(day3[df_data['ActionID'] == 5].index)),
-            #feature 7. количество уникальных дней активности - надо доработать
-            int(len(did_action['ActionTimeDt'].unique())),
-            #feature 8. макс дней между действиями
-            feat8,
-            #feature 9. дней между действием и доставкой
-            feat9
-        ])
+        res_1_9.append(features)
     return res_1_9
